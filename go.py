@@ -2,6 +2,8 @@ import sys
 import re
 import datetime
 import requests
+import pyperclip
+from kitchen.text.display import textual_width_fill
 
 VICTORY_MSG = u"\x1b[1;37;42m  \u52dd\u5229  \x1b[m"
 DEFEAT_MSG = u"\x1b[1;37;45m  \u843d\u6557  \x1b[m"
@@ -22,7 +24,24 @@ def bar_chart(i):
     graphs = ["", u"\u258F", u"\u258E", u"\u258D",
               u"\u258C", u"\u258B", u"\u258A", u"\u2589"]
     result += graphs[i]
-    return result
+    return result + "  " * (6 - len(result))
+
+
+def stats_first(stats, player):
+    return u"{0:<16} {1:>2}/{2:>2}/{3:>2} {4:>4} {5:>5}k".format(
+        player, stats["kills"], stats["deaths"], stats["assists"],
+        stats["totalMinionsKilled"],
+        round(stats["goldEarned"] / 100.00) / 10)
+
+
+def stats_second(participant, champions, max_damage):
+    damage = participant["stats"]["totalDamageDealtToChampions"]
+    print round(damage * 48.00 / max_damage)
+    return u"{0} {1}  {2:>6}".format(
+        textual_width_fill(champions[participant["championId"]], 16),
+        bar_chart(round(damage * 48.00 / max_damage)),
+        damage
+    )
 
 
 def main():
@@ -99,13 +118,22 @@ def main():
     blue_golds = 0
     red_kills = 0
     red_golds = 0
+    max_damage = 0
     for i in range(0, 5):
-        blue_kills += match_history["participants"][i]["stats"]["kills"]
-        blue_golds += match_history["participants"][i]["stats"]["goldEarned"]
+        stats = match_history["participants"][i]["stats"]
+        blue_kills += stats["kills"]
+        blue_golds += stats["goldEarned"]
+        max_damage = max(
+            max_damage,
+            stats["totalDamageDealtToChampions"])
     for i in range(5, 10):
-        red_kills += match_history["participants"][i]["stats"]["kills"]
-        red_golds += match_history["participants"][i]["stats"]["goldEarned"]
-    blue_kills = u"\x1b[1;34;40m{:>2}\x1b[m".format(blue_kills)
+        stats = match_history["participants"][i]["stats"]
+        red_kills += stats["kills"]
+        red_golds += stats["goldEarned"]
+        max_damage = max(
+            max_damage,
+            stats["totalDamageDealtToChampions"])
+    blue_kills = u"\x1b[1;36;40m{:>2}\x1b[m".format(blue_kills)
     red_kills = u"\x1b[1;31;40m{:>2}\x1b[m".format(red_kills)
     blue_golds = "{}k".format(round(blue_golds / 100.00) / 10)
     red_golds = "{}k".format(round(red_golds / 100.00) / 10)
@@ -129,12 +157,27 @@ def main():
         " " * 6, blue_result, " " * 11, patch_ver,
         duration, " " * 16, red_result)
     output += (u"\u2500" * 19) + u"\u253c" + (u"\u2500" * 19) + "\n"
+    output += u"{0} \u2502 {0}\n".format(
+        " " * 18 + "K  D  A   CS   Gold")
 
     # Iterrate through all players in the game.
     for i in range(0, 5):
-        pass
+        j = i + 5
+        output += (u"\x1b[1;36;40m{0}\x1b[m \u2502 "
+                   u"\x1b[1;31;40m{1}\x1b[m\n").format(
+            stats_first(match_history["participants"][i]["stats"], players[i]),
+            stats_first(match_history["participants"][j]["stats"], players[j]),
+        )
+        output += (u"{0} \u2502 {1}\n").format(
+            stats_second(match_history["participants"][i],
+                        champions, max_damage),
+            stats_second(match_history["participants"][j],
+                        champions, max_damage),
+        )
 
     print output
+    pyperclip.copy(output)
+    print "Copied to clipboard!"
 
 
 if __name__ == "__main__":
