@@ -126,7 +126,8 @@ def main():
     output += u"{0}{1:>6}    {2}  \u2502  {3}    {4:<6}\n".format(
         " " * 24, blue_golds, blue_kills, red_kills, red_golds)
     output += u"{0}{1}{2}PATCH{3:>6}  \u2502  {4}{5}{6}\n".format(
-        " " * 6, blue_result, " " * 11, patch_ver, duration, " " * 16, red_result)
+        " " * 6, blue_result, " " * 11, patch_ver,
+        duration, " " * 16, red_result)
     output += (u"\u2500" * 19) + u"\u253c" + (u"\u2500" * 19) + "\n"
 
     # Iterrate through all players in the game.
