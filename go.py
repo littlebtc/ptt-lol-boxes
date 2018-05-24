@@ -36,7 +36,6 @@ def stats_first(stats, player):
 
 def stats_second(participant, champions, max_damage):
     damage = participant["stats"]["totalDamageDealtToChampions"]
-    print round(damage * 48.00 / max_damage)
     return u"{0} {1}  {2:>6}".format(
         textual_width_fill(champions[participant["championId"]], 16),
         bar_chart(round(damage * 48.00 / max_damage)),
