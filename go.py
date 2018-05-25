@@ -193,9 +193,7 @@ def main():
         duration, ' ' * 16, red_result)
     output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
     output += u'{0} \u2502 {0}\n'.format(
-        ' ' * 18 + '\x1b[1;37;40mK  D  A   CS   Gold\x1b[m')
-    output += u'{0} \u2502 {0}\n'.format(
-        ' ' * 27 + u'\x1b[1;37;40m\u5c0d\u82f1\u96c4\u50b7\u5bb3\x1b[m')
+        ' ' * 18 + '\x1b[1;37;40mK  D  A   CS  $/Dmg\x1b[m')
 
     # Iterrate through all players in the game.
     for i in range(0, 5):
