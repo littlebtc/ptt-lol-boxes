@@ -43,6 +43,16 @@ def stats_second(participant, champions, max_damage):
     )
 
 
+def color_dragon(name):
+    return {
+        'FIRE_DRAGON': u'\x1b[1;31;40m\u706b\x1b[m',
+        'WATER_DRAGON': u'\x1b[1;36;40m\u6c34\x1b[m',
+        'AIR_DRAGON': u'\x1b[1;37;40m\u98a8\x1b[m',
+        'EARTH_DRAGON': u'\x1b[0;33;40m\u5730\x1b[m',
+        'ELDER_DRAGON': u'\x1b[1;37;46m\u53e4\x1b[m',
+    }[name]
+
+
 def main():
     if len(sys.argv) != 2:
         print 'Usage: python go.py MATCH-HISTORY-URL'
@@ -146,6 +156,32 @@ def main():
         if match_history['teams'][1]['win'] == 'Win'
         else DEFEAT_MSG
     )
+    blue_bans = [
+        champions[ban['championId']]
+        for ban in match_history['teams'][0]['bans']]
+    red_bans = [
+        champions[ban['championId']]
+        for ban in match_history['teams'][1]['bans']]
+
+    blue_dragons = ''
+    blue_dragon_count = 0
+    red_dragons = ''
+    red_dragon_count = 0
+    # Get the dragon slain from the timeline.
+    for frame in timeline['frames']:
+        for event in frame['events']:
+            if (event.get('monsterType', '') == 'DRAGON' and
+                    event['killerId'] < 5):
+                blue_dragons += color_dragon(
+                    event['monsterSubType']
+                )
+                blue_dragon_count += 1
+            elif event.get('monsterType', '') == 'DRAGON':
+                red_dragons += color_dragon(
+                    event['monsterSubType']
+                )
+                red_dragon_count += 1
+    blue_dragons += ' ' * (32 - blue_dragon_count * 2)
 
     # Output the result line-by-line.
     output += ((u'\u2500' * 19) + u'\u252c' + (u'\u2500' * 13) +
@@ -158,6 +194,8 @@ def main():
     output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
     output += u'{0} \u2502 {0}\n'.format(
         ' ' * 18 + '\x1b[1;37;40mK  D  A   CS   Gold\x1b[m')
+    output += u'{0} \u2502 {0}\n'.format(
+        ' ' * 27 + u'\x1b[1;37;40m\u5c0d\u82f1\u96c4\u50b7\u5bb3\x1b[m')
 
     # Iterrate through all players in the game.
     for i in range(0, 5):
@@ -169,11 +207,36 @@ def main():
         )
         output += (u'{0} \u2502 {1}\n').format(
             stats_second(match_history['participants'][i],
-                        champions, max_damage),
+                         champions, max_damage),
             stats_second(match_history['participants'][j],
-                        champions, max_damage),
+                         champions, max_damage),
         )
 
+    output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
+
+    # Stats like Bans, picks, dragons, barons.
+    output += u'{0} {1} {2} {3} \u2502 {0} {4} {5} {6}\n'.format(
+        u'\u7981\u7528',
+        textual_width_fill(blue_bans[0], 10),
+        textual_width_fill(blue_bans[1], 10),
+        textual_width_fill(blue_bans[2], 10),
+        textual_width_fill(red_bans[0], 10),
+        textual_width_fill(red_bans[1], 10),
+        textual_width_fill(red_bans[2], 10),
+        )
+    output += u'{0} {1} {2} {3} \u2502 {0} {4} {5}\n'.format(
+        ' ' * 4,
+        textual_width_fill(blue_bans[3], 10),
+        textual_width_fill(blue_bans[4], 10),
+        ' ' * 10,
+        textual_width_fill(red_bans[3], 10),
+        textual_width_fill(red_bans[4], 10),
+        )
+    output += u'{0} {1} \u2502 {0} {2}\n'.format(
+        u'\u5c0f\u9f8d', blue_dragons, red_dragons
+    )
+
+    # Print and copy to clipboard.
     print output
     pyperclip.copy(output)
     print 'Copied to clipboard!'
