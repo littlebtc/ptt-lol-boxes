@@ -235,6 +235,22 @@ def main():
     output += u'{0} {1} \u2502 {0} {2}\n'.format(
         u'\u5c0f\u9f8d', blue_dragons, red_dragons
     )
+    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
+               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d  ').format(
+        match_history['teams'][0]['towerKills'],
+        match_history['teams'][0]['inhibitorKills'],
+        match_history['teams'][0]['riftHeraldKills'],
+        match_history['teams'][0]['baronKills'],
+    )
+    output += u' \u2502 '
+    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
+               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d\n').format(
+        match_history['teams'][1]['towerKills'],
+        match_history['teams'][1]['inhibitorKills'],
+        match_history['teams'][1]['riftHeraldKills'],
+        match_history['teams'][1]['baronKills'],
+    )
+    output += (u'\u2500' * 19) + u'\u2534' + (u'\u2500' * 19) + '\n'
 
     # Print and copy to clipboard.
     print output
