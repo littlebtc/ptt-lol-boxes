@@ -2,7 +2,9 @@
 
 ### ptt-lol-boxes
 
-An open-sourced Python script to generate ready-to-use box article for PTT.
+An open-sourced Python script to generate ready-to-use box article from LoL match history to PTT.
+
+The result will be copied to your clipboard :)
 
 #### Getting started
 
