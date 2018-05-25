@@ -8,7 +8,10 @@ An open-sourced Python script to generate ready-to-use box article for PTT.
 
 `virtualenv` is recommended.
 
-For example, get the match result from the [final match](https://matchhistory.na.leagueoflegends.com/en/#match-details/TRLH1/1002570098?gameHash=0fb783d881dfa330&tab=stats) of the MSI 2018:
+Install the requirements first:
 
     pip install -r requirements.txt
+
+For example, get the match result from the [final match](https://matchhistory.na.leagueoflegends.com/en/#match-details/TRLH1/1002570098?gameHash=0fb783d881dfa330&tab=stats) of the MSI 2018:
+
     python go.py https://matchhistory.na.leagueoflegends.com/en/#match-details/TRLH1/1002570098?gameHash=0fb783d881dfa330
