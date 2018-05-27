@@ -28,8 +28,9 @@ def bar_chart(i):
 
 
 def stats_first(stats, player):
-    return u'{0:<16} {1:>2}/{2:>2}/{3:>2} {4:>4} {5:>5}k'.format(
-        player, stats['kills'], stats['deaths'], stats['assists'],
+    return u'{0} {1:>2}/{2:>2}/{3:>2} {4:>4} {5:>5}k'.format(
+        textual_width_fill(player, 16),
+        stats['kills'], stats['deaths'], stats['assists'],
         stats['totalMinionsKilled'],
         round(stats['goldEarned'] / 100.00) / 10)
 
