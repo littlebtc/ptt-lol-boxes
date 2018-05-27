@@ -263,9 +263,9 @@ def get_match_result(url, champions, game_number, teams, bitly_token):
 
 
 @click.command()
-@click.option('--number', '-n', type=int, default=1)
-@click.option('--teams', '-t', type=(unicode, unicode), multiple=True)
-@click.option('--bitly', '-b', type=unicode, default=u'')
+@click.option('--number', '-n', type=int, default=1, help='The game number of the first match. Default: 1')
+@click.option('--teams', '-t', type=(unicode, unicode), multiple=True, help='The team names. e.g. -t FW "Flash Wolves"')
+@click.option('--bitly', '-b', type=unicode, default=u'', help='The bitly generic access token to generate short URLs.')
 @click.argument('urls', nargs=-1)
 def main(number, teams, bitly, urls):
     champions = get_champions()
