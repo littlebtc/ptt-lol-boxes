@@ -2,3 +2,4 @@ requests==2.18.4
 kitchen==1.2.5
 pyperclip==1.6.1
 click==6.7
+bitly_api==0.3
