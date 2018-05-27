@@ -1,7 +1,7 @@
-import sys
 import re
 import datetime
 import requests
+import click
 import pyperclip
 from kitchen.text.display import textual_width_fill
 
@@ -54,27 +54,7 @@ def color_dragon(name):
     }[name]
 
 
-def main():
-    if len(sys.argv) != 2:
-        print 'Usage: python go.py MATCH-HISTORY-URL'
-        return
-    output = ''
-    # Check the URL from argv, get ID, normalize it.
-    url = sys.argv[1]
-    url_prefix = ('https://matchhistory.na.leagueoflegends.com/'
-                  'en/#match-details/')
-    if not url.startswith(url_prefix):
-        raise Exception('Expect a valid match history URL.')
-
-    re_id = re.compile(r'(TR[0-9A-Z]+\/[0-9]+)\?gameHash=([0-9a-z]+)')
-    match = re_id.search(url)
-    if not match:
-        raise Exception('Expect a valid match history URL.')
-    match_part = match.group(0)
-    match_id = match.group(1)
-    game_hash = match.group(2)
-    normalized_url = '{0}{1}'.format(url_prefix, match_part)
-
+def get_champions():
     # Get the latest ddragon version and get champion data.
     print '* Getting champion data...'
     res = requests.get('https://ddragon.leagueoflegends.com'
@@ -89,6 +69,25 @@ def main():
         (int(detail['key']), detail['name'])
         for _, detail in champions_dict.iteritems()
     ])
+    return champions
+
+
+def get_match_result(url, champions, game_number, teams, bitly_token):
+    output = ''
+    # Check the URL from argv, get ID, normalize it.
+    url_prefix = ('https://matchhistory.na.leagueoflegends.com/'
+                  'en/#match-details/')
+    if not url.startswith(url_prefix):
+        raise Exception('Expect a valid match history URL.')
+
+    re_id = re.compile(r'(TR[0-9A-Z]+\/[0-9]+)\?gameHash=([0-9a-z]+)')
+    match = re_id.search(url)
+    if not match:
+        raise Exception('Expect a valid match history URL.')
+    match_part = match.group(0)
+    match_id = match.group(1)
+    game_hash = match.group(2)
+    normalized_url = '{0}{1}'.format(url_prefix, match_part)
 
     ##########################################
     # Fetch the match history and analyze it.
@@ -124,6 +123,9 @@ def main():
         identity['player']['summonerName']
         for identity in match_history['participantIdentities']
     ]
+    team_dict = dict(teams)
+    blue_team_name = team_dict.get(players[0].split(' ')[0], '')
+    red_team_name = team_dict.get(players[5].split(' ')[0], '')
     blue_kills = 0
     blue_golds = 0
     red_kills = 0
@@ -183,12 +185,19 @@ def main():
                 )
                 red_dragon_count += 1
     blue_dragons += ' ' * (32 - blue_dragon_count * 2)
+    blue_team_spaces = 12 - len(blue_team_name) / 2
+    red_team_spaces = 12 - len(red_team_name) / 2
 
     # Output the result line-by-line.
-    output += ((u'\u2500' * 19) + u'\u252c' + (u'\u2500' * 13) +
-               ' ' + game_date + '\n')
-    output += u'{0}{1:>6}    {2}  \u2502  {3}    {4:<6}\n'.format(
-        ' ' * 24, blue_golds, blue_kills, red_kills, red_golds)
+    output += (u'\x1b[1;37;46mGame {0:>2}\x1b[m ' +
+               (u'\u2500' * 15) + u'\u252c' + (u'\u2500' * 13) +
+               ' {1}\n').format(game_number, game_date)
+    output += (u'{0}\x1b[1;37;44m{1}\x1b[m{2}{3:>6}    {4}  '
+               u'\u2502  {5}    {6:<6}{7}\x1b[1;37;41m{8}\x1b[m\n').format(
+        ' ' * blue_team_spaces, blue_team_name,
+        ' ' * (24 - blue_team_spaces - len(blue_team_name)),
+        blue_golds, blue_kills, red_kills, red_golds,
+        ' ' * red_team_spaces, red_team_name)
     output += u'{0}{1}{2}PATCH{3:>6}  \u2502  {4}{5}{6}\n'.format(
         ' ' * 6, blue_result, ' ' * 11, patch_ver,
         duration, ' ' * 16, red_result)
@@ -249,9 +258,23 @@ def main():
         match_history['teams'][1]['riftHeraldKills'],
         match_history['teams'][1]['baronKills'],
     )
-    output += (u'\u2500' * 19) + u'\u2534' + (u'\u2500' * 19) + '\n'
+    output += (u'\u2500' * 19) + u'\u2534' + (u'\u2500' * 19) + '\n\n'
+    return output
 
+
+@click.command()
+@click.option('--number', '-n', type=int, default=1)
+@click.option('--teams', '-t', type=(unicode, unicode), multiple=True)
+@click.option('--bitly', '-b', type=unicode, default=u'')
+@click.argument('urls', nargs=-1)
+def main(number, teams, bitly, urls):
+    champions = get_champions()
     # Print and copy to clipboard.
+    output = ''
+    i = number
+    for url in urls:
+        output += get_match_result(url, champions, i, teams, bitly)
+        i += 1
     print output
     pyperclip.copy(output)
     print 'Copied to clipboard!'
