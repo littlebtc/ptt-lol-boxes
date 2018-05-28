@@ -70,6 +70,8 @@ def get_champions():
         (int(detail['key']), detail['name'])
         for _, detail in champions_dict.iteritems()
     ])
+    # Deal with empty bans.
+    champions[-1] = u'(\u7121)'
     return champions
 
 
