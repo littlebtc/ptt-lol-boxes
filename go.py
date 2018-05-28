@@ -70,7 +70,7 @@ def get_champions():
         (int(detail['key']), detail['name'])
         for _, detail in champions_dict.iteritems()
     ])
-    # Deal with empty bans.
+    # Deal with empty bans in ranked games.
     champions[-1] = u'(\u7121)'
     return champions
 
@@ -170,9 +170,11 @@ def get_match_result(url, champions, game_number, teams, bitly):
     blue_bans = [
         champions[ban['championId']]
         for ban in match_history['teams'][0]['bans']]
+    blue_bans += [''] * (5 - len(blue_bans))
     red_bans = [
         champions[ban['championId']]
         for ban in match_history['teams'][1]['bans']]
+    red_bans += [''] * (5 - len(red_bans))
 
     blue_dragons = ''
     blue_dragon_count = 0
