@@ -83,7 +83,7 @@ def get_match_result(url, champions, game_number, teams, bitly):
     if not url.startswith(url_prefix):
         raise Exception('Expect a valid match history URL.')
 
-    re_id = re.compile(r'(TR[0-9A-Z]+\/[0-9]+)\?gameHash=([0-9a-z]+)')
+    re_id = re.compile(r'([0-9A-Z]+\/[0-9]+)\?gameHash=([0-9a-z]+)')
     match = re_id.search(url)
     if not match:
         raise Exception('Expect a valid match history URL.')
