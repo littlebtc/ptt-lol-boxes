@@ -7,7 +7,7 @@ import bitly_api
 from kitchen.text.display import textual_width_fill
 
 VICTORY_MSG = u'\x1b[1;37;42m  \u52dd\u5229  \x1b[m'
-DEFEAT_MSG = u'\x1b[1;37;45m  \u843d\u6557  \x1b[m'
+DEFEAT_MSG = u'\x1b[1;37;45m  \u6230\u6557  \x1b[m'
 
 
 def bar_chart(i):
@@ -209,8 +209,8 @@ def get_match_result(url, champions, game_number, teams, bitly):
         blue_golds, blue_kills, red_kills, red_golds,
         ' ' * red_team_spaces, red_team_name)
     output += u'{0}{1}{2}PATCH{3:>6}  \u2502  {4}{5}{6}\n'.format(
-        ' ' * 6, blue_result, ' ' * 11, patch_ver,
-        duration, ' ' * 16, red_result)
+        ' ' * 8, blue_result, ' ' * 9, patch_ver,
+        duration, ' ' * 15, red_result)
     output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
     output += u'{0} \u2502 {0}\n'.format(
         ' ' * 18 + '\x1b[1;37;40mK  D  A   CS  $/Dmg\x1b[m')
