@@ -271,16 +271,19 @@ def get_match_result(url, champions, game_number, teams, bitly):
     if short_url:
         output += ((u'\u2500' * 19) + u'\u2534' +
                    (u'\u2500' * 6) + '{0:>26}\n\n').format(
-        short_url)
+            short_url)
     else:
         output += (u'\u2500' * 19) + u'\u2534' + (u'\u2500' * 19) + '\n\n'
     return output
 
 
 @click.command()
-@click.option('--number', '-n', type=int, default=1, help='The game number of the first match. Default: 1')
-@click.option('--teams', '-t', type=(unicode, unicode), multiple=True, help='The team names. e.g. -t FW "Flash Wolves"')
-@click.option('--bitly_token', '-b', type=unicode, default=u'', help='The bitly generic access token to generate short URLs.')
+@click.option('--number', '-n', type=int, default=1,
+              help='The game number of the first match. Default: 1')
+@click.option('--teams', '-t', type=(unicode, unicode), multiple=True,
+              help='The team names. e.g. -t FW "Flash Wolves"')
+@click.option('--bitly_token', '-b', type=unicode, default=u'',
+              help='The bitly generic access token to generate short URLs.')
 @click.argument('urls', nargs=-1)
 def main(number, teams, bitly_token, urls):
     champions = get_champions()
