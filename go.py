@@ -78,19 +78,26 @@ def get_champions():
 def get_match_result(url, champions, game_number, teams, bitly):
     output = ''
     # Check the URL from argv, get ID, normalize it.
-    url_prefix = ('https://matchhistory.na.leagueoflegends.com/'
-                  'en/#match-details/')
-    if not url.startswith(url_prefix):
+    url_regex = (
+        r'^https?://matchhistory\.(?P<site>[a-z]+\.leagueoflegends\.com|'
+        r'leagueoflegends\.co\.kr)\/(?P<lang>[a-z]+)\/#match-details\/'
+        r'(?P<server>[0-9A-Z]+)\/(?P<id1>[0-9]+)'
+        r'(?P<id2>\/[0-9]+|\?gameHash=(?P<hash>[0-9a-z]+))'
+    )
+    url_match = re.match(url_regex, url)
+    if not url_match:
         raise Exception('Expect a valid match history URL.')
 
-    re_id = re.compile(r'([0-9A-Z]+\/[0-9]+)\?gameHash=([0-9a-z]+)')
-    match = re_id.search(url)
-    if not match:
-        raise Exception('Expect a valid match history URL.')
-    match_part = match.group(0)
-    match_id = match.group(1)
-    game_hash = match.group(2)
-    normalized_url = '{0}{1}'.format(url_prefix, match_part)
+    game_hash = url_match.group('hash')
+    garena = url_match.group('site').startswith(
+        ('id', 'ph', 'sg', 'tw', 'th', 'vn')
+    )
+    normalized_url = ('https://matchhistory.{0}/{1}/#match-details/'
+                      '{2}/{3}{4}').format(
+        url_match.group('site'), url_match.group('lang'),
+        url_match.group('server'), url_match.group('id1'),
+        url_match.group('id2'))
+
     short_url = ''
     if bitly:
         print '* Shorten URL...'
@@ -100,18 +107,26 @@ def get_match_result(url, champions, game_number, teams, bitly):
     ##########################################
     # Fetch the match history and analyze it.
     print '* Fetching matching history...'
-    json_url = ('https://acs.leagueoflegends.com'
-                '/v1/stats/game/{0}?gameHash={1}').format(
-                    match_id, game_hash)
+    json_url = ('https://{0}.leagueoflegends.com'
+                '/v1/stats/game/{1}/{2}{3}').format(
+                    'acs-garena' if garena else 'acs',
+                    url_match.group('server'),
+                    url_match.group('id1'),
+                    '?gameHash={0}'.format(game_hash) if game_hash else '')
+    print json_url
     res = requests.get(json_url)
     match_history = res.json()
 
     # Get timeline history. Maybe we can add graph at future.
     # It is the only way we can get the dragon types :(
     print '* Getting timeline data...'
-    json_timeline_url = ('https://acs.leagueoflegends.com'
-                         '/v1/stats/game/{0}/timeline?gameHash={1}').format(
-                         match_id, game_hash)
+    json_timeline_url = ('https://{0}.leagueoflegends.com'
+                         '/v1/stats/game/{1}/{2}/timeline{3}').format(
+                            'acs-garena' if garena else 'acs',
+                            url_match.group('server'),
+                            url_match.group('id1'),
+                            '?gameHash={0}'.format(
+                                game_hash) if game_hash else '')
     res = requests.get(json_timeline_url)
     timeline = res.json()
 
