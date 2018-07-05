@@ -4,6 +4,7 @@ import requests
 import click
 import pyperclip
 import bitly_api
+import json
 from kitchen.text.display import textual_width_fill
 
 VICTORY_MSG = u'\x1b[1;37;42m  \u52dd\u5229  \x1b[m'
@@ -97,9 +98,14 @@ def output_match_result(data, game_number, short_url, champions, lpl=False):
         data['blue_golds'], data['blue_kills'],
         data['red_kills'], data['red_golds'],
         ' ' * red_team_spaces, data['red_team_name'])
-    output += u'{0}{1}{2}PATCH{3:>6}  \u2502  {4}{5}{6}\n'.format(
-        ' ' * 8, data['blue_result'], ' ' * 9, data['patch_ver'],
-        data['duration'], ' ' * 15, data['red_result'])
+    if lpl:
+        output += u'{0}{1}{2}{3}  \u2502  {4}{5}{6}\n'.format(
+            ' ' * 8, data['blue_result'], ' ' * 9, ' ' * 11,
+            data['duration'], ' ' * 15, data['red_result'])
+    else:
+        output += u'{0}{1}{2}PATCH{3:>6}  \u2502  {4}{5}{6}\n'.format(
+            ' ' * 8, data['blue_result'], ' ' * 9, data['patch_ver'],
+            data['duration'], ' ' * 15, data['red_result'])
     output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
     output += u'{0} \u2502 {0}\n'.format(
         ' ' * 18 + '\x1b[1;37;40mK  D  A   CS  $/Dmg\x1b[m')
@@ -142,21 +148,33 @@ def output_match_result(data, game_number, short_url, champions, lpl=False):
     output += u'{0} {1} \u2502 {0} {2}\n'.format(
         u'\u5c0f\u9f8d', data['blue_dragons'], data['red_dragons']
     )
-    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
-               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d  ').format(
-        data['team_blue']['towerKills'],
-        data['team_blue']['inhibitorKills'],
-        data['team_blue']['riftHeraldKills'],
-        data['team_blue']['baronKills'],
-    )
-    output += u' \u2502 '
-    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
-               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d\n').format(
-        data['team_red']['towerKills'],
-        data['team_red']['inhibitorKills'],
-        data['team_red']['riftHeraldKills'],
-        data['team_red']['baronKills'],
-    )
+    if lpl:
+        output += (u'{0:>2} \u5854 / {1:>2} \u5df4\u9f8d{2}').format(
+            data['team_blue']['towerKills'],
+            data['team_blue']['baronKills'],
+            ' ' * 22
+        )
+        output += u' \u2502 '
+        output += (u'{0:>2} \u5854 / {1:>2} \u5df4\u9f8d\n').format(
+            data['team_red']['towerKills'],
+            data['team_red']['baronKills'],
+        )
+    else:
+        output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
+                   u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d  ').format(
+            data['team_blue']['towerKills'],
+            data['team_blue']['inhibitorKills'],
+            data['team_blue']['riftHeraldKills'],
+            data['team_blue']['baronKills'],
+        )
+        output += u' \u2502 '
+        output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
+                   u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d\n').format(
+            data['team_red']['towerKills'],
+            data['team_red']['inhibitorKills'],
+            data['team_red']['riftHeraldKills'],
+            data['team_red']['baronKills'],
+        )
     if short_url:
         output += ((u'\u2500' * 19) + u'\u2534' +
                    (u'\u2500' * 6) + '{0:>26}\n\n').format(
@@ -254,9 +272,6 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
     data['red_kills'] = red_kills
     data['blue_golds'] = blue_golds
     data['red_golds'] = red_golds
-
-    blue_kills = u'\x1b[1;36;40m{:>2}\x1b[m'.format(blue_kills)
-    red_kills = u'\x1b[1;31;40m{:>2}\x1b[m'.format(red_kills)
     data['blue_golds'] = '{}k'.format(round(blue_golds / 100.00) / 10)
     data['red_golds'] = '{}k'.format(round(red_golds / 100.00) / 10)
     data['blue_result'] = (
@@ -281,7 +296,6 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
     blue_dragons = ''
     blue_dragon_count = 0
     red_dragons = ''
-    red_dragon_count = 0
     # Get the dragon slain from the timeline.
     for frame in timeline['frames']:
         for event in frame['events']:
@@ -295,7 +309,6 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
                 red_dragons += color_dragon(
                     event['monsterSubType']
                 )
-                red_dragon_count += 1
     blue_dragons += ' ' * (32 - blue_dragon_count * 2)
     data['blue_dragons'] = blue_dragons
     data['red_dragons'] = red_dragons
@@ -304,6 +317,159 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
     data['team_red'] = match_history['teams'][1]
 
     return output_match_result(data, game_number, short_url, champions)
+
+
+def get_lpl_teams():
+    print "* Get LPL teams..."
+    res = requests.get(
+        'http://lpl.qq.com/web201612'
+        '/data/LOL_MATCH2_TEAM_LIST.js'
+    )
+    data = json.loads(res.text.split('=', 1)[1][:-1])
+    return dict(
+        (team['TeamId'], team['TeamName'])
+        for team in data['msg'].itervalues())
+
+
+def get_lpl_matches(group_id, bitly):
+    short_url = ''
+    if bitly:
+        normalized_url = (
+            'http://lpl.qq.com/es/stats.shtml?bmid={0}').format(group_id)
+        print '* Shorten URL...'
+        shorten_data = bitly.shorten(normalized_url)
+        short_url = shorten_data['url']
+
+    res = requests.get(
+        ('http://apps.game.qq.com/lol/match/apis/'
+         'searchSMatchList.php?p0={0}&r1=SMatchListArr').format(group_id)
+    )
+    # Dirty way to convert JSONP to json.
+    data = json.loads(res.text.split('=', 1)[1][:-1])
+    return short_url, (msg['sMatchId'] for msg in data['msg'])
+
+
+def get_match_result_lpl(match_id, champions,
+                         game_number, teams, short_url):
+    lpl_teams = get_lpl_teams()
+
+    print '* Getting LPL data...'
+    res = requests.get(
+        ('http://apps.game.qq.com/lol/match/apis/'
+         'searchMatchInfo_s.php?p0={0}&r1=MatchInfo').format(match_id)
+    )
+    # Dirty way to convert JSONP to json.
+    msg_data = json.loads(res.text.split('=', 1)[1][:-1])['msg']
+    battle_data = json.loads(msg_data['battleInfo']['BattleData'])
+
+    data = dict()
+    # Some data that needs to be prepared.
+    data['patch_ver'] = ''
+    m, s = divmod(int(battle_data['game-period']), 60)
+    data['duration'] = '{0:02d}:{1:02d}'.format(m, s)
+    data['game_date'] = battle_data['game-date']
+    data['players'] = [
+        p['name'] for p in battle_data['left']['players']
+    ] + [
+        p['name'] for p in battle_data['right']['players']
+    ]
+    match_info = msg_data['sMatchInfo']
+    blue_team = match_info['BlueTeam']
+    red_team = (
+        match_info['TeamB']
+        if match_info['BlueTeam'] == match_info['TeamA']
+        else match_info['TeamA']
+    )
+    team_dict = dict(teams)
+    data['blue_team_name'] = team_dict.get(
+        lpl_teams[blue_team], lpl_teams[blue_team])
+    data['red_team_name'] = team_dict.get(
+        lpl_teams[red_team], lpl_teams[red_team])
+
+    blue_kills = 0
+    blue_golds = 0
+    red_kills = 0
+    red_golds = 0
+    max_damage = 0
+    for player in battle_data['left']['players']:
+        blue_kills += int(player['kill'])
+        blue_golds += int(player['gold'])
+        max_damage = max(
+            max_damage,
+            int(player['totalDamageToChamp']))
+    for player in battle_data['right']['players']:
+        red_kills += int(player['kill'])
+        red_golds += int(player['gold'])
+        max_damage = max(
+            max_damage,
+            int(player['totalDamageToChamp']))
+
+    data['max_damage'] = max_damage
+    data['blue_kills'] = blue_kills
+    data['red_kills'] = red_kills
+    data['blue_golds'] = blue_golds
+    data['red_golds'] = red_golds
+    data['blue_golds'] = '{}k'.format(round(blue_golds / 100.00) / 10)
+    data['red_golds'] = '{}k'.format(round(red_golds / 100.00) / 10)
+    data['blue_result'] = (
+        VICTORY_MSG
+        if battle_data['game-win'] == 'left'
+        else DEFEAT_MSG
+    )
+    data['red_result'] = (
+        VICTORY_MSG
+        if battle_data['game-win'] == 'right'
+        else DEFEAT_MSG
+    )
+    # For LPL match history, empty ban is presented as champion id zero.
+    blue_bans = [
+        int(battle_data['left']['ban-hero-{0}'.format(i)])
+        for i in range(1, 6)]
+    red_bans = [
+        int(battle_data['right']['ban-hero-{0}'.format(i)])
+        for i in range(1, 6)]
+    data['blue_bans'] = [
+        champions[b] if b != 0 else ''
+        for b in blue_bans
+    ]
+    data['red_bans'] = [
+        champions[b] if b != 0 else ''
+        for b in red_bans
+    ]
+    data['blue_dragons'] = '{0:<32}'.format(battle_data['left']['s-dragon'])
+    data['red_dragons'] = battle_data['right']['s-dragon']
+
+    data['participants'] = []
+    for player in (battle_data['left']['players'] +
+                   battle_data['right']['players']):
+        participant = {
+             'championId': int(player['hero']),
+             'stats': {
+                 'totalDamageDealtToChampions': int(
+                     player['totalDamageToChamp']),
+                 'kills': int(player['kill']),
+                 'deaths': int(player['death']),
+                 'assists': int(player['assist']),
+                 'totalMinionsKilled': int(player['lasthit']),
+                 'neutralMinionsKilled': 0,
+                 'goldEarned': int(player['gold'])
+             }
+        }
+        data['participants'].append(participant)
+
+    data['team_blue'] = {
+        'towerKills': battle_data['left']['tower'],
+        'inhibitorKills': 0,
+        'riftHeraldKills': 0,
+        'baronKills': battle_data['left']['b-dragon']
+    }
+    data['team_red'] = {
+        'towerKills': battle_data['right']['tower'],
+        'inhibitorKills': 0,
+        'riftHeraldKills': 0,
+        'baronKills': battle_data['right']['b-dragon']
+    }
+    return output_match_result(data, game_number, short_url, champions, True)
 
 
 @click.command()
@@ -332,6 +498,28 @@ def main(number, teams, bitly_token, urls):
         url_match = re.match(url_regex, url)
         if url_match:
             output += get_match_result(url_match, champions, i, teams, bitly)
+        else:
+            lpl_url_regex = (
+                r'^http://lpl\.qq\.com\/es\/stats\.shtml'
+                r'\?bmid=(?P<id>[0-9]+)$'
+            )
+            lpl_old_url_regex = (
+                r'^http://lol\.qq\.com\/match\/match_data\.shtml'
+                r'\?bmid=(?P<id>[0-9]+)$'
+            )
+            lpl_url_match = re.match(lpl_url_regex, url)
+            lpl_old_url_match = re.match(lpl_old_url_regex, url)
+            # For LPL, we should fetch every matches in the group.
+            if lpl_url_match:
+                short_url, matches = get_lpl_matches(lpl_url_match.group('id'), bitly)
+                for match_id in matches:
+                    output += get_match_result_lpl(
+                        match_id, champions, i, teams, short_url)
+            elif lpl_old_url_match:
+                short_url, matches = get_lpl_matches(lpl_old_url_match.group('id'), bitly)
+                for match_id in matches:
+                    output += get_match_result_lpl(
+                        match_id, champions, i, teams, short_url)
         i += 1
     print output
     pyperclip.copy(output)
