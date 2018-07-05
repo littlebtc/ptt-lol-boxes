@@ -75,18 +75,98 @@ def get_champions():
     return champions
 
 
-def get_match_result(url, champions, game_number, teams, bitly):
+def output_match_result(data, game_number, short_url, champions, lpl=False):
+    print '* Preparing output...'
+
     output = ''
-    # Check the URL from argv, get ID, normalize it.
-    url_regex = (
-        r'^https?://matchhistory\.(?P<site>[a-z]+\.leagueoflegends\.com|'
-        r'leagueoflegends\.co\.kr)\/(?P<lang>[a-z]+)\/#match-details\/'
-        r'(?P<server>[0-9A-Z]+)\/(?P<id1>[0-9]+)'
-        r'(?P<id2>\/[0-9]+|\?gameHash=(?P<hash>[0-9a-z]+))'
+
+    # Output the result line-by-line.
+    output += (u'\x1b[1;37;46mGame {0:>2}\x1b[m ' +
+               (u'\u2500' * 15) + u'\u252c' + (u'\u2500' * 13) +
+               ' {1}\n').format(game_number, data['game_date'])
+
+    blue_team_spaces = 12 - len(data['blue_team_name']) / 2
+    red_team_spaces = 12 - len(data['red_team_name']) / 2
+
+    output += (u'{0}\x1b[1;37;44m{1}\x1b[m{2}{3:>6}    '
+               u'\x1b[1;36;40m{4:>2}\x1b[m'
+               u'  \u2502  \x1b[1;31;40m{5:>2}\x1b[m    '
+               u'{6:<6}{7}\x1b[1;37;41m{8}\x1b[m\n').format(
+        ' ' * blue_team_spaces, data['blue_team_name'],
+        ' ' * (24 - blue_team_spaces - len(data['blue_team_name'])),
+        data['blue_golds'], data['blue_kills'],
+        data['red_kills'], data['red_golds'],
+        ' ' * red_team_spaces, data['red_team_name'])
+    output += u'{0}{1}{2}PATCH{3:>6}  \u2502  {4}{5}{6}\n'.format(
+        ' ' * 8, data['blue_result'], ' ' * 9, data['patch_ver'],
+        data['duration'], ' ' * 15, data['red_result'])
+    output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
+    output += u'{0} \u2502 {0}\n'.format(
+        ' ' * 18 + '\x1b[1;37;40mK  D  A   CS  $/Dmg\x1b[m')
+
+    # Iterrate through all players in the game.
+    for i in range(0, 5):
+        j = i + 5
+        output += (u'\x1b[1;36;40m{0}\x1b[m \u2502 '
+                   u'\x1b[1;31;40m{1}\x1b[m\n').format(
+            stats_first(data['participants'][i]['stats'], data['players'][i]),
+            stats_first(data['participants'][j]['stats'], data['players'][j]),
+        )
+        output += (u'{0} \u2502 {1}\n').format(
+            stats_second(data['participants'][i],
+                         champions, data['max_damage']),
+            stats_second(data['participants'][j],
+                         champions, data['max_damage']),
+        )
+
+    output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
+
+    # Stats like Bans, picks, dragons, barons.
+    output += u'{0} {1} {2} {3} \u2502 {0} {4} {5} {6}\n'.format(
+        u'\u7981\u7528',
+        textual_width_fill(data['blue_bans'][0], 10),
+        textual_width_fill(data['blue_bans'][1], 10),
+        textual_width_fill(data['blue_bans'][2], 10),
+        textual_width_fill(data['red_bans'][0], 10),
+        textual_width_fill(data['red_bans'][1], 10),
+        textual_width_fill(data['red_bans'][2], 10),
+        )
+    output += u'{0} {1} {2} {3} \u2502 {0} {4} {5}\n'.format(
+        ' ' * 4,
+        textual_width_fill(data['blue_bans'][3], 10),
+        textual_width_fill(data['blue_bans'][4], 10),
+        ' ' * 10,
+        textual_width_fill(data['red_bans'][3], 10),
+        textual_width_fill(data['red_bans'][4], 10),
+        )
+    output += u'{0} {1} \u2502 {0} {2}\n'.format(
+        u'\u5c0f\u9f8d', data['blue_dragons'], data['red_dragons']
     )
-    url_match = re.match(url_regex, url)
-    if not url_match:
-        raise Exception('Expect a valid match history URL.')
+    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
+               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d  ').format(
+        data['team_blue']['towerKills'],
+        data['team_blue']['inhibitorKills'],
+        data['team_blue']['riftHeraldKills'],
+        data['team_blue']['baronKills'],
+    )
+    output += u' \u2502 '
+    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
+               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d\n').format(
+        data['team_red']['towerKills'],
+        data['team_red']['inhibitorKills'],
+        data['team_red']['riftHeraldKills'],
+        data['team_red']['baronKills'],
+    )
+    if short_url:
+        output += ((u'\u2500' * 19) + u'\u2534' +
+                   (u'\u2500' * 6) + '{0:>26}\n\n').format(
+            short_url)
+    else:
+        output += (u'\u2500' * 19) + u'\u2534' + (u'\u2500' * 19) + '\n\n'
+    return output
+
+
+def get_match_result(url_match, champions, game_number, teams, bitly):
 
     game_hash = url_match.group('hash')
     garena = url_match.group('site').startswith(
@@ -133,22 +213,23 @@ def get_match_result(url, champions, game_number, teams, bitly):
     ##########################################
     # Output!
 
-    print '* Preparing output...'
-
+    data = dict()
     # Some data that needs to be prepared.
-    patch_ver = re.search(
+    data['patch_ver'] = re.search(
         r'^[0-9]+\.[0-9]+', match_history['gameVersion']).group(0)
     m, s = divmod(match_history['gameDuration'], 60)
-    duration = '{0:02d}:{1:02d}'.format(m, s)
-    game_date = datetime.datetime.fromtimestamp(
+    data['duration'] = '{0:02d}:{1:02d}'.format(m, s)
+    data['game_date'] = datetime.datetime.fromtimestamp(
         match_history['gameCreation'] / 1000).strftime('%Y-%m-%d')
-    players = [
+    data['players'] = [
         identity['player']['summonerName']
         for identity in match_history['participantIdentities']
     ]
     team_dict = dict(teams)
-    blue_team_name = team_dict.get(players[0].split(' ')[0], '')
-    red_team_name = team_dict.get(players[5].split(' ')[0], '')
+    data['blue_team_name'] = team_dict.get(
+        data['players'][0].split(' ')[0], '')
+    data['red_team_name'] = team_dict.get(
+        data['players'][5].split(' ')[0], '')
     blue_kills = 0
     blue_golds = 0
     red_kills = 0
@@ -168,28 +249,34 @@ def get_match_result(url, champions, game_number, teams, bitly):
         max_damage = max(
             max_damage,
             stats['totalDamageDealtToChampions'])
+    data['max_damage'] = max_damage
+    data['blue_kills'] = blue_kills
+    data['red_kills'] = red_kills
+    data['blue_golds'] = blue_golds
+    data['red_golds'] = red_golds
+
     blue_kills = u'\x1b[1;36;40m{:>2}\x1b[m'.format(blue_kills)
     red_kills = u'\x1b[1;31;40m{:>2}\x1b[m'.format(red_kills)
-    blue_golds = '{}k'.format(round(blue_golds / 100.00) / 10)
-    red_golds = '{}k'.format(round(red_golds / 100.00) / 10)
-    blue_result = (
+    data['blue_golds'] = '{}k'.format(round(blue_golds / 100.00) / 10)
+    data['red_golds'] = '{}k'.format(round(red_golds / 100.00) / 10)
+    data['blue_result'] = (
         VICTORY_MSG
         if match_history['teams'][0]['win'] == 'Win'
         else DEFEAT_MSG
     )
-    red_result = (
+    data['red_result'] = (
         VICTORY_MSG
         if match_history['teams'][1]['win'] == 'Win'
         else DEFEAT_MSG
     )
-    blue_bans = [
+    data['blue_bans'] = [
         champions[ban['championId']]
         for ban in match_history['teams'][0]['bans']]
-    blue_bans += [''] * (5 - len(blue_bans))
-    red_bans = [
+    data['blue_bans'] += [''] * (5 - len(data['blue_bans']))
+    data['red_bans'] = [
         champions[ban['championId']]
         for ban in match_history['teams'][1]['bans']]
-    red_bans += [''] * (5 - len(red_bans))
+    data['red_bans'] += [''] * (5 - len(data['red_bans']))
 
     blue_dragons = ''
     blue_dragon_count = 0
@@ -210,86 +297,13 @@ def get_match_result(url, champions, game_number, teams, bitly):
                 )
                 red_dragon_count += 1
     blue_dragons += ' ' * (32 - blue_dragon_count * 2)
-    blue_team_spaces = 12 - len(blue_team_name) / 2
-    red_team_spaces = 12 - len(red_team_name) / 2
+    data['blue_dragons'] = blue_dragons
+    data['red_dragons'] = red_dragons
+    data['participants'] = match_history['participants']
+    data['team_blue'] = match_history['teams'][0]
+    data['team_red'] = match_history['teams'][1]
 
-    # Output the result line-by-line.
-    output += (u'\x1b[1;37;46mGame {0:>2}\x1b[m ' +
-               (u'\u2500' * 15) + u'\u252c' + (u'\u2500' * 13) +
-               ' {1}\n').format(game_number, game_date)
-    output += (u'{0}\x1b[1;37;44m{1}\x1b[m{2}{3:>6}    {4}  '
-               u'\u2502  {5}    {6:<6}{7}\x1b[1;37;41m{8}\x1b[m\n').format(
-        ' ' * blue_team_spaces, blue_team_name,
-        ' ' * (24 - blue_team_spaces - len(blue_team_name)),
-        blue_golds, blue_kills, red_kills, red_golds,
-        ' ' * red_team_spaces, red_team_name)
-    output += u'{0}{1}{2}PATCH{3:>6}  \u2502  {4}{5}{6}\n'.format(
-        ' ' * 8, blue_result, ' ' * 9, patch_ver,
-        duration, ' ' * 15, red_result)
-    output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
-    output += u'{0} \u2502 {0}\n'.format(
-        ' ' * 18 + '\x1b[1;37;40mK  D  A   CS  $/Dmg\x1b[m')
-
-    # Iterrate through all players in the game.
-    for i in range(0, 5):
-        j = i + 5
-        output += (u'\x1b[1;36;40m{0}\x1b[m \u2502 '
-                   u'\x1b[1;31;40m{1}\x1b[m\n').format(
-            stats_first(match_history['participants'][i]['stats'], players[i]),
-            stats_first(match_history['participants'][j]['stats'], players[j]),
-        )
-        output += (u'{0} \u2502 {1}\n').format(
-            stats_second(match_history['participants'][i],
-                         champions, max_damage),
-            stats_second(match_history['participants'][j],
-                         champions, max_damage),
-        )
-
-    output += (u'\u2500' * 19) + u'\u253c' + (u'\u2500' * 19) + '\n'
-
-    # Stats like Bans, picks, dragons, barons.
-    output += u'{0} {1} {2} {3} \u2502 {0} {4} {5} {6}\n'.format(
-        u'\u7981\u7528',
-        textual_width_fill(blue_bans[0], 10),
-        textual_width_fill(blue_bans[1], 10),
-        textual_width_fill(blue_bans[2], 10),
-        textual_width_fill(red_bans[0], 10),
-        textual_width_fill(red_bans[1], 10),
-        textual_width_fill(red_bans[2], 10),
-        )
-    output += u'{0} {1} {2} {3} \u2502 {0} {4} {5}\n'.format(
-        ' ' * 4,
-        textual_width_fill(blue_bans[3], 10),
-        textual_width_fill(blue_bans[4], 10),
-        ' ' * 10,
-        textual_width_fill(red_bans[3], 10),
-        textual_width_fill(red_bans[4], 10),
-        )
-    output += u'{0} {1} \u2502 {0} {2}\n'.format(
-        u'\u5c0f\u9f8d', blue_dragons, red_dragons
-    )
-    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
-               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d  ').format(
-        match_history['teams'][0]['towerKills'],
-        match_history['teams'][0]['inhibitorKills'],
-        match_history['teams'][0]['riftHeraldKills'],
-        match_history['teams'][0]['baronKills'],
-    )
-    output += u' \u2502 '
-    output += (u'{0:>2} \u5854 / {1} \u5175\u71df / '
-               u'{2} \u9810\u793a\u8005 / {3:>2} \u5df4\u9f8d\n').format(
-        match_history['teams'][1]['towerKills'],
-        match_history['teams'][1]['inhibitorKills'],
-        match_history['teams'][1]['riftHeraldKills'],
-        match_history['teams'][1]['baronKills'],
-    )
-    if short_url:
-        output += ((u'\u2500' * 19) + u'\u2534' +
-                   (u'\u2500' * 6) + '{0:>26}\n\n').format(
-            short_url)
-    else:
-        output += (u'\u2500' * 19) + u'\u2534' + (u'\u2500' * 19) + '\n\n'
-    return output
+    return output_match_result(data, game_number, short_url, champions)
 
 
 @click.command()
@@ -309,7 +323,15 @@ def main(number, teams, bitly_token, urls):
     if bitly_token:
         bitly = bitly_api.Connection(access_token=bitly_token)
     for url in urls:
-        output += get_match_result(url, champions, i, teams, bitly)
+        url_regex = (
+            r'^https?://matchhistory\.(?P<site>[a-z]+\.leagueoflegends\.com|'
+            r'leagueoflegends\.co\.kr)\/(?P<lang>[a-z]+)\/#match-details\/'
+            r'(?P<server>[0-9A-Z]+)\/(?P<id1>[0-9]+)'
+            r'(?P<id2>\/[0-9]+|\?gameHash=(?P<hash>[0-9a-z]+))'
+        )
+        url_match = re.match(url_regex, url)
+        if url_match:
+            output += get_match_result(url_match, champions, i, teams, bitly)
         i += 1
     print output
     pyperclip.copy(output)
