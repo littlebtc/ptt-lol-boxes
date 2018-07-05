@@ -498,6 +498,7 @@ def main(number, teams, bitly_token, urls):
         url_match = re.match(url_regex, url)
         if url_match:
             output += get_match_result(url_match, champions, i, teams, bitly)
+            i += 1
         else:
             lpl_url_regex = (
                 r'^http://lpl\.qq\.com\/es\/stats\.shtml'
@@ -515,12 +516,13 @@ def main(number, teams, bitly_token, urls):
                 for match_id in matches:
                     output += get_match_result_lpl(
                         match_id, champions, i, teams, short_url)
+                    i += 1
             elif lpl_old_url_match:
                 short_url, matches = get_lpl_matches(lpl_old_url_match.group('id'), bitly)
                 for match_id in matches:
                     output += get_match_result_lpl(
                         match_id, champions, i, teams, short_url)
-        i += 1
+                    i += 1
     print output
     pyperclip.copy(output)
     print 'Copied to clipboard!'
