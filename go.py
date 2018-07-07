@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import re
 import datetime
 import requests
@@ -6,6 +8,8 @@ import pyperclip
 import bitly_api
 import json
 from kitchen.text.display import textual_width_fill
+import six
+from six.moves import range
 
 VICTORY_MSG = u'\x1b[1;37;42m  \u52dd\u5229  \x1b[m'
 DEFEAT_MSG = u'\x1b[1;37;45m  \u6230\u6557  \x1b[m'
@@ -58,7 +62,7 @@ def color_dragon(name):
 
 def get_champions():
     # Get the latest ddragon version and get champion data.
-    print '* Getting champion data...'
+    print('* Getting champion data...')
     res = requests.get('https://ddragon.leagueoflegends.com'
                        '/api/versions.json')
     ddragon_patch = res.json()[0]
@@ -69,7 +73,7 @@ def get_champions():
     champions_dict = res.json()['data']
     champions = dict([
         (int(detail['key']), detail['name'])
-        for _, detail in champions_dict.iteritems()
+        for _, detail in six.iteritems(champions_dict)
     ])
     # Deal with empty bans in ranked games.
     champions[-1] = u'(\u7121)'
@@ -77,7 +81,7 @@ def get_champions():
 
 
 def output_match_result(data, game_number, short_url, champions, lpl=False):
-    print '* Preparing output...'
+    print('* Preparing output...')
 
     output = ''
 
@@ -198,26 +202,26 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
 
     short_url = ''
     if bitly:
-        print '* Shorten URL...'
+        print('* Shorten URL...')
         shorten_data = bitly.shorten(normalized_url)
         short_url = shorten_data['url']
 
     ##########################################
     # Fetch the match history and analyze it.
-    print '* Fetching matching history...'
+    print('* Fetching matching history...')
     json_url = ('https://{0}.leagueoflegends.com'
                 '/v1/stats/game/{1}/{2}{3}').format(
                     'acs-garena' if garena else 'acs',
                     url_match.group('server'),
                     url_match.group('id1'),
                     '?gameHash={0}'.format(game_hash) if game_hash else '')
-    print json_url
+    print(json_url)
     res = requests.get(json_url)
     match_history = res.json()
 
     # Get timeline history. Maybe we can add graph at future.
     # It is the only way we can get the dragon types :(
-    print '* Getting timeline data...'
+    print('* Getting timeline data...')
     json_timeline_url = ('https://{0}.leagueoflegends.com'
                          '/v1/stats/game/{1}/{2}/timeline{3}').format(
                             'acs-garena' if garena else 'acs',
@@ -320,7 +324,7 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
 
 
 def get_lpl_teams():
-    print "* Get LPL teams..."
+    print("* Get LPL teams...")
     res = requests.get(
         'http://lpl.qq.com/web201612'
         '/data/LOL_MATCH2_TEAM_LIST.js'
@@ -328,7 +332,7 @@ def get_lpl_teams():
     data = json.loads(res.text.split('=', 1)[1][:-1])
     return dict(
         (team['TeamId'], team['TeamName'])
-        for team in data['msg'].itervalues())
+        for team in six.itervalues(data['msg']))
 
 
 def get_lpl_matches(group_id, bitly):
@@ -336,7 +340,7 @@ def get_lpl_matches(group_id, bitly):
     if bitly:
         normalized_url = (
             'http://lpl.qq.com/es/stats.shtml?bmid={0}').format(group_id)
-        print '* Shorten URL...'
+        print('* Shorten URL...')
         shorten_data = bitly.shorten(normalized_url)
         short_url = shorten_data['url']
 
@@ -353,7 +357,7 @@ def get_match_result_lpl(match_id, champions,
                          game_number, teams, short_url):
     lpl_teams = get_lpl_teams()
 
-    print '* Getting LPL data...'
+    print('* Getting LPL data...')
     res = requests.get(
         ('http://apps.game.qq.com/lol/match/apis/'
          'searchMatchInfo_s.php?p0={0}&r1=MatchInfo').format(match_id)
@@ -475,9 +479,9 @@ def get_match_result_lpl(match_id, champions,
 @click.command()
 @click.option('--number', '-n', type=int, default=1,
               help='The game number of the first match. Default: 1')
-@click.option('--teams', '-t', type=(unicode, unicode), multiple=True,
+@click.option('--teams', '-t', type=(six.text_type, six.text_type), multiple=True,
               help='The team names. e.g. -t FW "Flash Wolves"')
-@click.option('--bitly_token', '-b', type=unicode, default=u'',
+@click.option('--bitly_token', '-b', type=six.text_type, default=u'',
               help='The bitly generic access token to generate short URLs.')
 @click.argument('urls', nargs=-1)
 def main(number, teams, bitly_token, urls):
@@ -523,9 +527,9 @@ def main(number, teams, bitly_token, urls):
                     output += get_match_result_lpl(
                         match_id, champions, i, teams, short_url)
                     i += 1
-    print output
+    print(output)
     pyperclip.copy(output)
-    print 'Copied to clipboard!'
+    print('Copied to clipboard!')
 
 
 if __name__ == '__main__':
