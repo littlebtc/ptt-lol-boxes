@@ -8,9 +8,17 @@ The result will be copied to your clipboard :)
 
 #### Getting started
 
-`virtualenv` is recommended.
+`pipenv` is recommended.
 
 Install the requirements first:
+
+    pipenv install
+
+Then enter the virtual environment by:
+
+    pipenv shell
+
+Or if you prefer old way with pip + virtualenv, `requirements.txt` is also available:
 
     pip install -r requirements.txt
 

@@ -5,7 +5,7 @@ import datetime
 import requests
 import click
 import pyperclip
-import bitly_api
+from pyshorteners import Shortener, Shorteners
 import json
 from kitchen.text.display import textual_width_fill
 import six
@@ -90,8 +90,8 @@ def output_match_result(data, game_number, short_url, champions, lpl=False):
                (u'\u2500' * 15) + u'\u252c' + (u'\u2500' * 13) +
                ' {1}\n').format(game_number, data['game_date'])
 
-    blue_team_spaces = 12 - len(data['blue_team_name']) / 2
-    red_team_spaces = 12 - len(data['red_team_name']) / 2
+    blue_team_spaces = 12 - len(data['blue_team_name']) // 2
+    red_team_spaces = 12 - len(data['red_team_name']) // 2
 
     output += (u'{0}\x1b[1;37;44m{1}\x1b[m{2}{3:>6}    '
                u'\x1b[1;36;40m{4:>2}\x1b[m'
@@ -203,8 +203,7 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
     short_url = ''
     if bitly:
         print('* Shorten URL...')
-        shorten_data = bitly.shorten(normalized_url)
-        short_url = shorten_data['url']
+        short_url = bitly.short(normalized_url)
 
     ##########################################
     # Fetch the match history and analyze it.
@@ -341,8 +340,7 @@ def get_lpl_matches(group_id, bitly):
         normalized_url = (
             'http://lpl.qq.com/es/stats.shtml?bmid={0}').format(group_id)
         print('* Shorten URL...')
-        shorten_data = bitly.shorten(normalized_url)
-        short_url = shorten_data['url']
+        short_url = bitly.short(normalized_url)
 
     res = requests.get(
         ('http://apps.game.qq.com/lol/match/apis/'
@@ -491,7 +489,7 @@ def main(number, teams, bitly_token, urls):
     i = number
     bitly = None
     if bitly_token:
-        bitly = bitly_api.Connection(access_token=bitly_token)
+        bitly = Shortener(Shorteners.BITLY, bitly_token=bitly_token,timeout=5)
     for url in urls:
         url_regex = (
             r'^https?://matchhistory\.(?P<site>[a-z]+\.leagueoflegends\.com|'
