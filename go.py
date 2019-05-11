@@ -303,7 +303,7 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
     for frame in timeline['frames']:
         for event in frame['events']:
             if (event.get('monsterType', '') == 'DRAGON' and
-                    event['killerId'] < 5):
+                    event['killerId'] <= 5):
                 blue_dragons += color_dragon(
                     event['monsterSubType']
                 )
