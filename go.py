@@ -1,15 +1,17 @@
 from __future__ import absolute_import
 from __future__ import print_function
+import platform
 import re
 import datetime
 import requests
 import click
 import pyperclip
-from pyshorteners import Shortener, Shorteners
+from getpass import getpass
+from pyshorteners import Shortener
 import json
 from kitchen.text.display import textual_width_fill
 import six
-from six.moves import range
+from six.moves import input, range
 
 VICTORY_MSG = u'\x1b[1;37;42m  \u52dd\u5229  \x1b[m'
 DEFEAT_MSG = u'\x1b[1;37;45m  \u6230\u6557  \x1b[m'
@@ -188,7 +190,7 @@ def output_match_result(data, game_number, short_url, champions, lpl=False):
     return output
 
 
-def get_match_result(url_match, champions, game_number, teams, shortener):
+def get_match_result(url_match, champions, game_number, teams, shortener, session):
 
     game_hash = url_match.group('hash')
     garena = url_match.group('site').startswith(
@@ -215,7 +217,7 @@ def get_match_result(url_match, champions, game_number, teams, shortener):
                     url_match.group('id1'),
                     '?gameHash={0}'.format(game_hash) if game_hash else '')
     print(json_url)
-    res = requests.get(json_url)
+    res = session.get(json_url)
     match_history = res.json()
 
     # Get timeline history. Maybe we can add graph at future.
@@ -228,7 +230,7 @@ def get_match_result(url_match, champions, game_number, teams, shortener):
                             url_match.group('id1'),
                             '?gameHash={0}'.format(
                                 game_hash) if game_hash else '')
-    res = requests.get(json_timeline_url)
+    res = session.get(json_timeline_url)
     timeline = res.json()
 
     ##########################################
@@ -474,6 +476,32 @@ def get_match_result_lpl(match_id, champions,
     return output_match_result(data, game_number, short_url, champions, True)
 
 
+def sign_in_with_riot():
+    username = input('Your Riot Username: ')
+    password = getpass('Your Riot Password: ')
+    session = requests.Session()
+    resp = session.get('https://login.leagueoflegends.com/')
+    resp.raise_for_status()
+
+    resp = session.put(
+        'https://auth.riotgames.com/api/v1/authorization',
+        json={
+            'type': 'auth',
+            'username': username,
+            'password': password,
+            'type': 'auth',
+            'language': 'en_US'
+        }
+    )
+    resp.raise_for_status()
+    result = resp.json()
+    if 'error' in result:
+        raise Exception('Auth Error, please try again.')
+    resp = session.get(resp.json()['response']['parameters']['uri'])
+    resp.raise_for_status()
+    return session
+
+
 @click.command()
 @click.option('--number', '-n', type=int, default=1,
               help='The game number of the first match. Default: 1')
@@ -488,6 +516,7 @@ def main(number, teams, bitly_token, urls):
     output = ''
     i = number
     shortener = None
+    riot_session = None
     if bitly_token:
         shortener = Shortener(api_key=bitly_token,timeout=5)
     for url in urls:
@@ -499,7 +528,9 @@ def main(number, teams, bitly_token, urls):
         )
         url_match = re.match(url_regex, url)
         if url_match:
-            output += get_match_result(url_match, champions, i, teams, shortener)
+            if not riot_session:
+                riot_session = sign_in_with_riot()
+            output += get_match_result(url_match, champions, i, teams, shortener, riot_session)
             i += 1
         else:
             lpl_url_regex = (
@@ -526,7 +557,16 @@ def main(number, teams, bitly_token, urls):
                         match_id, champions, i, teams, short_url)
                     i += 1
     print(output)
-    pyperclip.copy(output)
+
+    # https://github.com/asweigart/pyperclip/pull/168
+    if platform.system() == 'Linux':
+        with open('/proc/version', 'r') as f:
+            if "microsoft" in f.read().lower():
+                copy, _ = pyperclip.init_wsl_clipboard()    
+    else:
+        copy = pyperclip.copy
+
+    copy(output)
     print('Copied to clipboard!')
 
 
