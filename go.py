@@ -188,7 +188,7 @@ def output_match_result(data, game_number, short_url, champions, lpl=False):
     return output
 
 
-def get_match_result(url_match, champions, game_number, teams, bitly):
+def get_match_result(url_match, champions, game_number, teams, shortener):
 
     game_hash = url_match.group('hash')
     garena = url_match.group('site').startswith(
@@ -201,9 +201,9 @@ def get_match_result(url_match, champions, game_number, teams, bitly):
         url_match.group('id2'))
 
     short_url = ''
-    if bitly:
+    if shortener:
         print('* Shorten URL...')
-        short_url = bitly.short(normalized_url)
+        short_url = shortener.bitly.short(normalized_url)
 
     ##########################################
     # Fetch the match history and analyze it.
@@ -334,13 +334,13 @@ def get_lpl_teams():
         for team in six.itervalues(data['msg']))
 
 
-def get_lpl_matches(group_id, bitly):
+def get_lpl_matches(group_id, shortener):
     short_url = ''
-    if bitly:
+    if shortener:
         normalized_url = (
             'http://lpl.qq.com/es/stats.shtml?bmid={0}').format(group_id)
         print('* Shorten URL...')
-        short_url = bitly.short(normalized_url)
+        short_url = shortener.bitly.short(normalized_url)
 
     res = requests.get(
         ('http://apps.game.qq.com/lol/match/apis/'
@@ -487,9 +487,9 @@ def main(number, teams, bitly_token, urls):
     # Print and copy to clipboard.
     output = ''
     i = number
-    bitly = None
+    shortener = None
     if bitly_token:
-        bitly = Shortener(Shorteners.BITLY, bitly_token=bitly_token,timeout=5)
+        shortener = Shortener(api_key=bitly_token,timeout=5)
     for url in urls:
         url_regex = (
             r'^https?://matchhistory\.(?P<site>[a-z]+\.leagueoflegends\.com|'
@@ -499,7 +499,7 @@ def main(number, teams, bitly_token, urls):
         )
         url_match = re.match(url_regex, url)
         if url_match:
-            output += get_match_result(url_match, champions, i, teams, bitly)
+            output += get_match_result(url_match, champions, i, teams, shortener)
             i += 1
         else:
             lpl_url_regex = (
@@ -514,13 +514,13 @@ def main(number, teams, bitly_token, urls):
             lpl_old_url_match = re.match(lpl_old_url_regex, url)
             # For LPL, we should fetch every matches in the group.
             if lpl_url_match:
-                short_url, matches = get_lpl_matches(lpl_url_match.group('id'), bitly)
+                short_url, matches = get_lpl_matches(lpl_url_match.group('id'), shortener)
                 for match_id in matches:
                     output += get_match_result_lpl(
                         match_id, champions, i, teams, short_url)
                     i += 1
             elif lpl_old_url_match:
-                short_url, matches = get_lpl_matches(lpl_old_url_match.group('id'), bitly)
+                short_url, matches = get_lpl_matches(lpl_old_url_match.group('id'), shortener)
                 for match_id in matches:
                     output += get_match_result_lpl(
                         match_id, champions, i, teams, short_url)

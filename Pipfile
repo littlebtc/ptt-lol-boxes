@@ -9,9 +9,9 @@ requests = "*"
 kitchen = "*"
 pyperclip = "*"
 click = "*"
-pyshorteners = "<1.0.0"
+pyshorteners = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
